@@ -41,11 +41,6 @@ def insert_sample_info(sample_name, sample_file_identifier, session):
                 sample_name=sample_name,
                 sample_file_identifier=sample_file_identifier))
 
-    #x = SampleNameToSampleFileIdentifier(
-    #    sample_name=sample_name,
-    #    sample_file_identifier=sample_file_identifier)
-    #session.add(x)
-
 
 def find_sample_name_for_sample_file_identifier(sample_file_identifier, session):
     return session.query(
