@@ -32,22 +32,16 @@ from orminator import session_manager
 
 def main(argv):
 
-    # look for the usual irods file
-    #with iRODSSession(irods_env_file=os.path.expanduser('~/.irods/irods_environment.json')) as irods_session:
-    #    print(irods_session.host)
-    #    print(irods_session.port)
-    #    print(irods_session.username)
-    #    print(irods_session.zone)
     sample_iddb.build()
     station_db.build()
 
     muscope_collection_paths = (
         #'/iplant/home/scope/data/armbrust/HL2A',
         # check '/iplant/home/scope/data/caron/HL2A',
-        # check '/iplant/home/scope/data/caron/HL3',
+        '/iplant/home/scope/data/caron/HL3',
         # check '/iplant/home/scope/data/caron/HOT/268_271_275_279',
         # check '/iplant/home/scope/data/caron/HOT/273',
-        #'/iplant/home/scope/data/chisholm/HOT',
+        '/iplant/home/scope/data/chisholm/HOT',
         # check '/iplant/home/scope/data/delong/HL2A',
         '/iplant/home/scope/data/dyhrman/HL4',
     )
@@ -693,31 +687,32 @@ def parse_Dyhrman_HL4_incubation_seq_assoc_data_v3__xls(spreadsheet_fp):
 
     # the old sample_names will go into sample_description_column
     # a sample_description will be entered for the 3rd row in addition to the 1st row
-    sample_description_column = []
+    ##sample_description_column = []
     for (r1, row1), (r2, row2), (r3, row3), (r4, row4) in util.grouper(core_attr_plus_data_df.iterrows(), n=4):
         print(row1.seq_name)
-        sample_description_column.append(row1.sample_name)  # e.g. insitu_25m_051116_rep2
-        sample_description_column.append(row2.sample_name)  # empty
-        sample_description_column.append(row1.sample_name)  # e.g insitu_25m_051116_rep2
-        sample_description_column.append(row2.sample_name)  # empty
+        ##sample_description_column.append(row1.sample_name)  # e.g. insitu_25m_051116_rep2
+        ##sample_description_column.append(row2.sample_name)  # empty
+        ##sample_description_column.append(row1.sample_name)  # e.g insitu_25m_051116_rep2
+        ##sample_description_column.append(row2.sample_name)  # empty
 
         # extract a new sample name from each R1 seq_name
-        new_sample_name_1 = new_sample_name_re.search(row1.seq_name).group('new_sample_name')
-        new_sample_name_3 = new_sample_name_re.search(row3.seq_name).group('new_sample_name')
+        ##new_sample_name_1 = new_sample_name_re.search(row1.seq_name).group('new_sample_name')
+        ##new_sample_name_3 = new_sample_name_re.search(row3.seq_name).group('new_sample_name')
 
         # convert the strings in collection_time to datetime.time objects
         core_attr_plus_data_df.loc[row1.name, 'collection_time'] = datetime.time(
             hour=int(str(row1.collection_time)[0:2]),
             minute=int(str(row1.collection_time)[2:4]))
 
-        core_attr_plus_data_df.loc[row1.name, 'sample_name'] = new_sample_name_1
-        core_attr_plus_data_df.loc[row3.name, 'sample_name'] = new_sample_name_3
+        ##core_attr_plus_data_df.loc[row1.name, 'sample_name'] = new_sample_name_1
+        core_attr_plus_data_df.loc[row3.name, 'sample_name'] = row1.sample_name
 
         # copy attributes from 1st row to 3rd row
         core_attr_plus_data_df.loc[row3.name, 0:8] = core_attr_plus_data_df.iloc[row1.name, 0:8]
         core_attr_plus_data_df.loc[row3.name, 10:] = core_attr_plus_data_df.iloc[row1.name, 10:]
 
-    core_attr_plus_data_df['sample_description'] = sample_description_column
+    # don't do this
+    ##core_attr_plus_data_df['sample_description'] = sample_description_column
 
     return core_attr_plus_data_df
 
