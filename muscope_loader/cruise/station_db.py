@@ -11,7 +11,6 @@ from irods.keywords import FORCE_FLAG_KW
 from irods.session import iRODSSession
 
 import muscope_loader
-import muscope_loader.util as util
 
 from orminator import session_manager
 
