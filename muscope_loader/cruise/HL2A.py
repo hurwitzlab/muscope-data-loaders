@@ -38,12 +38,12 @@ def main(argv):
     muscope_collection_paths = (
         #'/iplant/home/scope/data/armbrust/HL2A',
         # check '/iplant/home/scope/data/caron/HL2A',
-        '/iplant/home/scope/data/caron/HL3',
+        #'/iplant/home/scope/data/caron/HL3',
         # check '/iplant/home/scope/data/caron/HOT/268_271_275_279',
         # check '/iplant/home/scope/data/caron/HOT/273',
-        '/iplant/home/scope/data/chisholm/HOT',
-        # check '/iplant/home/scope/data/delong/HL2A',
-        '/iplant/home/scope/data/dyhrman/HL4',
+        #'/iplant/home/scope/data/chisholm/HOT',
+        '/iplant/home/scope/data/delong/HL2A',
+        #'/iplant/home/scope/data/dyhrman/HL4',
     )
 
     for c in muscope_collection_paths:
@@ -247,7 +247,7 @@ sample_name_pattern_table = {
 #   ribosomal_rRNA.gff
 #
     re.compile(
-        r'(?P<sample_name>([A-Z0-9]+)-(\d+[a-z]+)-(S\d+C\d+)-(\d+))')
+        r'(?P<sample_name>(CSHLII[DR]\d\d)-(\d+[a-z]+)-(S\d+C\d+)-(\d+))')
     : 'DeLong HL2A',
 
 #
@@ -669,7 +669,15 @@ def parse_Chisholm_HOT263__283_Vesicle_seq_attrib_v2__xls(spreadsheet_fp):
     return parse_attributes(spreadsheet_fp)
 
 
-def parse_DeLong_HL2A_DNAdiel_seq_assoc_data_v2__xlsx(spreadsheet_fp):
+def parse_DeLong_HL2A_DNAdiel_seq_assoc_data_v3__xls(spreadsheet_fp):
+    return parse_attributes(spreadsheet_fp)
+
+
+def parse_DeLong_HL2A_0__2frac_diel_seq_assoc_data_v3__xls(spreadsheet_fp):
+    return parse_attributes(spreadsheet_fp)
+
+
+def parse_DeLong_HL2A_RNAdiel_seq_assoc_data_v3__xls(spreadsheet_fp):
     return parse_attributes(spreadsheet_fp)
 
 
