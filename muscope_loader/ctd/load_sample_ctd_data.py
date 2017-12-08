@@ -29,6 +29,7 @@ import muscope_loader.models as models
 
 def main(argv):
     for water_column_df in get_all_water_column_spreadsheets():
+        cruise_name = water_column_df.cruise_name[0]
         print(water_column_df.head())
         # calculate expected depth based on pressure for all rosette positions
         # this calculation is found at http://www.seabird.com/document/an69-conversion-pressure-depth
@@ -103,6 +104,14 @@ def main(argv):
                         station_water_column_df.pressure.iloc[best_bottle_index],
                         depth_difference.iloc[best_bottle_index]))
 
+                    if depth_difference.iloc[best_bottle_index] >= 1.0:
+                        print('  {} {} station {} sample {} large depth difference: {:5.2f}'.format(
+                            ','.join([i.last_name for i in sample.investigator_list]),
+                            cruise_name,
+                            station,
+                            sample.sample_name,
+                            depth_difference.iloc[best_bottle_index]))
+
                     best_ctd_row = station_water_column_df.iloc[best_bottle_index, :]
 
                     # remove columns to the left of pressure - they are not attributes
@@ -124,7 +133,7 @@ def main(argv):
 
                         sample_attr = sample_attribute_table.get(column_name.strip().lower(), None)
                         if sample_attr is None:
-                            print('  !! sample "{}" does not have attribute "{}"'.format(sample.sample_name, column_name))
+                            print('  ## sample "{}" does not have attribute "{}"'.format(sample.sample_name, column_name))
                             print('     adding new attribute with type "{}" and value "{}"'.format(column_name, column_value))
                             sample_attr_type = session.query(models.Sample_attr_type).filter(
                                 models.Sample_attr_type.type_ == column_name).one()
