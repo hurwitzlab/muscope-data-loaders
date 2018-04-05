@@ -42,8 +42,9 @@ def main(argv):
         # check '/iplant/home/scope/data/caron/HOT/268_271_275_279',
         # check '/iplant/home/scope/data/caron/HOT/273',
         #'/iplant/home/scope/data/chisholm/HOT',
-        '/iplant/home/scope/data/delong/HL2A',
+        #'/iplant/home/scope/data/delong/HL2A',
         #'/iplant/home/scope/data/dyhrman/HL4',
+        '/iplant/home/scope/data/dyhrman/MS',
     )
 
     for c in muscope_collection_paths:
@@ -254,9 +255,10 @@ sample_name_pattern_table = {
 #  SM125_S42_L008_R1_001.fastq.gz
 #
     re.compile(
-        r'(?P<sample_name>[A-Z]+\d+_[A-Z]+\d+)'
+        r'(?P<sample_name>SM\d+_S\d+)'
         r'_L\d+_R[12]_\d+\.fastq(\.gz)?$')
-    : 'Dyhrman HL4'
+    : 'Dyhrman HL4 or MESO-SCOPE',
+
 }
 
 
@@ -266,7 +268,7 @@ def parse_data_file_path_or_name(path_or_name):
     sample_path_match_set = {
         sample_name_pattern.search(path_or_name)
         for sample_name_pattern, sample_name_pattern_label
-        in sample_name_pattern_table.items() }
+        in sample_name_pattern_table.items()}
 
     if None in sample_path_match_set:
         sample_path_match_set.remove(None)
@@ -452,6 +454,7 @@ file_type_table = {
 
 reads_re = re.compile(r'\.(fasta|fastq)(\.(gz|bz2))?$')
 
+
 def get_sample_file_type(data_object_name):
     matched_file_types = []
     for file_type_re, file_type in file_type_table.items():
@@ -520,7 +523,6 @@ def load_data_file(muscope_data_object, sample_name_match, session_class):
                     sample_file.sample_file_type = session.query(
                         models.Sample_file_type).filter(models.Sample_file_type.type_ == sample_file_type).one()
 
-
         except sa.orm.exc.MultipleResultsFound as mrf:
             # this probably means we have found one or more rows with mismatched cruise and sample
             # this is an error I caused earlier
@@ -551,11 +553,9 @@ def parse_attributes(spreadsheet_fp):
     core_attr_plus_data_df = pd.read_excel(
         spreadsheet_fp,
         sheet_name='core attributes + data',
-        skiprows=(0,2)
+        skiprows=(0, 2)
     )
     core_attr_plus_data_df.rename(columns={'depth_sample': 'depth'}, inplace=True)
-
-    # combine collection date and collection time
 
     print('core attributes + data')
     print(core_attr_plus_data_df.head())
@@ -577,7 +577,7 @@ def parse_Caron_HL2A_18Sdiel_seq_attrib_v2__xls(spreadsheet_fp):
     :return:
     """
 
-    core_attr_plus_data_df = parse_attributes(spreadsheet_fp)\
+    core_attr_plus_data_df = parse_attributes(spreadsheet_fp)
 
     # column 10 header is on the wrong line
     column_10_header = core_attr_plus_data_df.columns[9]
@@ -690,37 +690,58 @@ def parse_Dyhrman_HL4_incubation_seq_assoc_data_v3__xls(spreadsheet_fp):
     # the second 2 seq_names are paired-end reads e.g.
     #   SM143_S33_L002_R1_001.fastq and SM143_S33_L002_R2_001.fastq
 
-    # this re will extract a new sample name from each R1 seq_name
-    new_sample_name_re = re.compile(r'^(?P<new_sample_name>[A-Z]+\d+_[A-Z]+\d+)_L\d+_R[12]_\d+\.fastq$')
-
-    # the old sample_names will go into sample_description_column
-    # a sample_description will be entered for the 3rd row in addition to the 1st row
-    ##sample_description_column = []
     for (r1, row1), (r2, row2), (r3, row3), (r4, row4) in util.grouper(core_attr_plus_data_df.iterrows(), n=4):
         print(row1.seq_name)
-        ##sample_description_column.append(row1.sample_name)  # e.g. insitu_25m_051116_rep2
-        ##sample_description_column.append(row2.sample_name)  # empty
-        ##sample_description_column.append(row1.sample_name)  # e.g insitu_25m_051116_rep2
-        ##sample_description_column.append(row2.sample_name)  # empty
-
-        # extract a new sample name from each R1 seq_name
-        ##new_sample_name_1 = new_sample_name_re.search(row1.seq_name).group('new_sample_name')
-        ##new_sample_name_3 = new_sample_name_re.search(row3.seq_name).group('new_sample_name')
 
         # convert the strings in collection_time to datetime.time objects
         core_attr_plus_data_df.loc[row1.name, 'collection_time'] = datetime.time(
             hour=int(str(row1.collection_time)[0:2]),
             minute=int(str(row1.collection_time)[2:4]))
 
-        ##core_attr_plus_data_df.loc[row1.name, 'sample_name'] = new_sample_name_1
+        # copy sample name from 1st row to 3rd row
         core_attr_plus_data_df.loc[row3.name, 'sample_name'] = row1.sample_name
 
         # copy attributes from 1st row to 3rd row
         core_attr_plus_data_df.loc[row3.name, 0:8] = core_attr_plus_data_df.iloc[row1.name, 0:8]
         core_attr_plus_data_df.loc[row3.name, 10:] = core_attr_plus_data_df.iloc[row1.name, 10:]
 
-    # don't do this
-    ##core_attr_plus_data_df['sample_description'] = sample_description_column
+    return core_attr_plus_data_df
+
+
+def parse_Dyhrman_MS_incubation_assoc_data_v3__xls(spreadsheet_fp):
+    core_attr_plus_data_df = parse_attributes(spreadsheet_fp)
+
+    # there are 4 seq_names for each sample name
+    # the first 2 seq_names are paired-end reads e.g.
+    #   SM178_S9_L001_R1_001.fastq.gz and SM178_S9_L001_R2_001.fastq.gz
+    # the second 2 seq_names are paired-end reads e.g.
+    #   SM226_S9_L005_R1_001.fastq.gz and SM226_S9_L005_R2_001.fastq.gz
+
+    # parse time strings such as '12:45:00' and '1245'
+    # the first 3 collection times are datetime objects, the remaining collection times are just strings like "1205"
+    time_re = re.compile(r'^(?P<hour>\d{1,2}):?(?P<minute>\d{1,2})(:(?P<second>)\d{1,2})?$')
+
+    for (r1, row1), (r2, row2), (r3, row3), (r4, row4) in util.grouper(core_attr_plus_data_df.iterrows(), n=4):
+        print(row1.seq_name)
+
+        # change the cruise name to MESO-SCOPE
+        core_attr_plus_data_df.loc[row1.name, 'cruise_name'] = 'MESO-SCOPE'
+        core_attr_plus_data_df.loc[row2.name, 'cruise_name'] = 'MESO-SCOPE'
+        core_attr_plus_data_df.loc[row3.name, 'cruise_name'] = 'MESO-SCOPE'
+        core_attr_plus_data_df.loc[row4.name, 'cruise_name'] = 'MESO-SCOPE'
+
+        # convert the strings in collection_time to datetime.time objects
+        collection_time_match = time_re.search(str(row1.collection_time))
+        core_attr_plus_data_df.loc[row1.name, 'collection_time'] = datetime.time(
+            hour=int(collection_time_match.group('hour')),
+            minute=int(collection_time_match.group('minute')))
+
+        # copy sample name from 1st row to 3rd row
+        core_attr_plus_data_df.loc[row3.name, 'sample_name'] = row1.sample_name
+
+        # copy attributes from 1st row to 3rd row
+        core_attr_plus_data_df.loc[row3.name, 0:8] = core_attr_plus_data_df.iloc[row1.name, 0:8]
+        core_attr_plus_data_df.loc[row3.name, 10:] = core_attr_plus_data_df.iloc[row1.name, 10:]
 
     return core_attr_plus_data_df
 

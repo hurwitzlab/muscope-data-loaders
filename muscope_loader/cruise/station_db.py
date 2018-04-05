@@ -77,21 +77,31 @@ def build():
                     local_file_fp,
                     **{FORCE_FLAG_KW: True})
 
+                # MS_watercolumn.xlsx is a little different from the others
+                if os.path.basename(local_file_fp).startswith('MS_'):
+                    print('why it is "{}"'.format(local_file_fp))
+                    skiprows = (1, )
+                else:
+                    skiprows = (0, 2)
+
                 watercolumn_df = pd.read_excel(
                     local_file_fp,
-                    skiprows=(0,2))
-
-                #print(watercolumn_df.iloc[:5, :5])
-                #print(watercolumn_df.iloc[:, 0].unique())
+                    skiprows=skiprows)
 
                 for r, row in watercolumn_df.iterrows():
+
+                    # the MESO-SCOPE cruise is called 'MS' in the spreadsheets
+                    # but we want to call it 'MESO-SCOPE' in the database
+                    cruise_name = row[0]
+                    if cruise_name == 'MS':
+                        cruise_name = 'MESO-SCOPE'
+
                     station_query_result = db_session.query(Station).filter(
-                        Station.cruise_name == row[0],
+                        Station.cruise_name == cruise_name,
                         Station.station_number == row.station).one_or_none()
                     if station_query_result is None:
-                        #print(row[0], row.station, row.rosette_position)
                         s = Station(
-                            cruise_name=row[0],
+                            cruise_name=cruise_name,
                             station_number=int(row.station),
                             latitude=row.latitude,
                             longitude=(-1.0 * row.longitude))
