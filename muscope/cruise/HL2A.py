@@ -26,9 +26,9 @@ and find the data file directories
 under the assumption that data files will be found in a subcollection under the collection that includes the
 corresponding attribute spreadsheet.
 
-First all attribute spreadsheets are parsed and samples are inserted into the muscope database.
+First all attribute spreadsheets are parsed and samples are inserted into the muSCOPE database.
 
-Second the sample file paths are inserted into the muscope database.
+Second the sample file paths are inserted into the muSCOPE database.
 
 usage:
   python HL2A.py --collections /iplant/home/scope/data/dyhrman --db-uri $MUSCOPE_DB_URI --file-limit 100
@@ -36,7 +36,7 @@ usage:
 
 current usage:
 (msdl) vagrant@vagrant:/muscope-data-loaders$ python muscope/cruise/HL2A.py --collections /iplant/home/scope/data/dyhrman --db-uri $MUSCOPE_DB_URI --file-limit 10
-
+(flum) vagrant@vagrant:/muscope-data-loaders$ time python muscope/cruise/HL2A.py --collections /iplant/home/scope/data/caron/HL2A --attribute-file-pattern Caron_HL2A_VertProf_seq_attrib_v3\\.xls --db-uri $MUSCOPE_DB_URI --load-data
 
 """
 import argparse
@@ -68,13 +68,15 @@ def get_args(argv):
                             help='muSCOPE database URI e.g. mysql+pymysql://imicrobe:<password>@localhost/muscope2')
     arg_parser.add_argument('--collections', required=True,
                             help='comma-separated IRODS collections')
+    arg_parser.add_argument('--attribute-file-pattern', required=False, default='\\.xlsx?',
+                            help='optionally specify a regular expression to match attribute file names')
     arg_parser.add_argument('--load-data', required=False, action='store_true', default=False,
                             help='load database')
     arg_parser.add_argument('--file-limit', required=False, type=int, default=None,
                             help='maximum number of files to process')
 
-
     args = arg_parser.parse_args(argv)
+    print('command line args: {}'.format(args))
 
     return args
 
@@ -102,10 +104,13 @@ def main(argv):
     #     #'/iplant/home/scope/data/dyhrman/MS',
     # )
 
+    attribute_file_pattern = args.attribute_file_pattern
+
     for c in muscope_collection_paths:
         #print('processing collection "{}"'.format(c))
         process_muscope_collection(
-            c,
+            muscope_collection_path=c,
+            attribute_file_pattern=attribute_file_pattern,
             db_uri=args.db_uri,
             sample_id_db_uri=sample_id_db_uri,
             station_db_uri=station_db_uri,
@@ -115,7 +120,7 @@ def main(argv):
     return 0
 
 
-def process_muscope_collection(muscope_collection_path, db_uri, sample_id_db_uri, station_db_uri, load_data, file_limit):
+def process_muscope_collection(muscope_collection_path, attribute_file_pattern, db_uri, sample_id_db_uri, station_db_uri, load_data, file_limit):
     """
     List the contents of the argument (a collection) and recursively list the contents of subcollections.
     When a data object is found look for a function that can parse it based on its name.
@@ -129,7 +134,7 @@ def process_muscope_collection(muscope_collection_path, db_uri, sample_id_db_uri
     # e.g. mysql+pymysql://imicrobe:<password>@localhost/muscope2
 
     data_file_endings = re.compile(r'\.(fastq|fasta|fna|gff|faa)(\.(gz|bz2))?$')
-    attribute_file_endings = re.compile(r'\.xlsx?')
+    attribute_file_re = re.compile(attribute_file_pattern)
 
     processed_file_paths = []
     loaded_file_paths = []
@@ -150,10 +155,10 @@ def process_muscope_collection(muscope_collection_path, db_uri, sample_id_db_uri
             for muscope_data_object in muscope_collection.data_objects:
                 #print('found data object {} in {}'.format(muscope_data_object.name, muscope_collection.path))
 
-                attribute_file_match = attribute_file_endings.search(muscope_data_object.name)
+                attribute_file_match = attribute_file_re.search(muscope_data_object.name)
 
                 if attribute_file_match is None:
-                    print('not an attribute file: {}'.format(muscope_data_object.name))
+                    print('{} does not match attribute file pattern "{}"'.format(muscope_data_object.name, attribute_file_pattern))
                 else:
                     print('found an attribute file {}'.format(muscope_data_object.path))
                     conjectured_parse_function_name = 'parse_' + muscope_data_object.name.replace('.', '__')
@@ -226,20 +231,12 @@ def process_muscope_collection(muscope_collection_path, db_uri, sample_id_db_uri
                         else:
                             processed_file_paths.append(muscope_data_object.path)
 
-                            #
-                            # version 2
-                            #
-
                             load_data_file(
                                 muscope_data_object,
                                 db_uri=db_uri,
                                 sample_db_uri=sample_id_db_uri,
                                 load_data=load_data)
                             loaded_file_paths.append(muscope_data_object.path)
-
-                            #
-                            # version 2
-                            #
 
                             # I need some space
                             print()
@@ -411,8 +408,6 @@ def load_attributes(core_attr_df, db_uri, sample_id_db_uri, station_db_uri, load
             '\n\t'.join([v.type_ for k, v in sorted(sample_attributes_present.items())])))
 
         # many but NOT ALL attribute spreadsheets have an even number of rows for each sample
-        # the following did not work for Armbrust
-        ##for (r1, sample_file_r1_row), (r2, sample_file_r2_row) in util.grouper(core_attr_df.iterrows(), n=2):
         for r1, sample_file_r1_row in core_attr_df.iterrows():
             print('sample with sample_name "{}"'.format(sample_file_r1_row.sample_name))
 
@@ -457,10 +452,6 @@ def load_attributes(core_attr_df, db_uri, sample_id_db_uri, station_db_uri, load
                     sample_latitude = station.latitude
                     sample_longitude = station.longitude
 
-                #
-                # version 2
-                #
-
                 print('associating file "{}" with sample name "{}"'.format(
                     sample_file_r1_row.seq_name,
                     sample_file_r1_row.sample_name))
@@ -488,10 +479,6 @@ def load_attributes(core_attr_df, db_uri, sample_id_db_uri, station_db_uri, load
                         data_type=data_type,
                         sample_name=sample_file_r1_row.sample_name,
                         session=sample_iddb_session)
-
-                #
-                # version 2
-                #
 
                 sample_query_result = session.query(models.Sample).filter(
                     models.Sample.station_number == station_number,
@@ -533,31 +520,35 @@ def load_attributes(core_attr_df, db_uri, sample_id_db_uri, station_db_uri, load
                     # we are not loading data right now
                     pass
                 else:
-                    # the next block does not work for some reason - try another way
-                    # are the sample files in the database?
+                    # load 'em up
                     if len(sample.sample_file_list) == 0:
                         print('  !! no sample files')
                     else:
-                        print('  sample files are:\n\t'.format(
+                        print('  sample files are:\n\t{}'.format(
                             '\n\t'.join(
-                                [s.file_ for s in sample.sample_file_list])))
+                                [f.file_ for f in sample.sample_file_list])))
 
                     # check the sample attributes
                     print('  {} sample attributes are present'.format(len(sample.sample_attr_list)))
+                    print('\t{}'.format('\n\t'.join(sorted(['{}: "{}"'.format(a.sample_attr_type.type_, a.value) for a in sample.sample_attr_list]))))
 
-                    for column_header, column_sample_attr_type in sample_attributes_present.items():
+                    for column_header, column_sample_attr_type in sorted(sample_attributes_present.items()):
                         sample_attrs_with_column_attr_type = [
                             a
                             for a
                             in sample.sample_attr_list
                             if a.sample_attr_type == column_sample_attr_type]
-                        print('  sample has {} attribute(s) with sample attribute type "{}"'.format(
-                            len(sample_attrs_with_column_attr_type), column_sample_attr_type.type_))
+                        if len(sample_attrs_with_column_attr_type) == 0:
+                            print('  sample has {} attribute(s) with sample attribute type "{}"'.format(
+                                len(sample_attrs_with_column_attr_type), column_sample_attr_type.type_))
+                        else:
+                            # already printed this attribute above
+                            pass
 
                         attr_value = sample_file_r1_row[column_header]
                         if str(attr_value) == 'nan':
                             # there was no value in the spreadsheet for this row and column
-                            print('    no "{}" value for this sample'.format(column_sample_attr_type.type_))
+                            print('    no "{}" value for this sample in attribute file'.format(column_sample_attr_type.type_))
                         else:
                             if not load_data:
                                 print('  attribute will not be loaded')
@@ -734,20 +725,55 @@ def parse_Caron_HL2A_18Sdiel_seq_attrib_v2__xls(spreadsheet_fp):
     return core_attr_plus_data_df
 
 
-def parse_Caron_HL2A_VertProf_seq_attrib_v2__xls(spreadsheet_fp):
+def parse_Caron_HL2A_VertProf_seq_attrib_v3__xls(spreadsheet_fp):
+    """Copy sample_name to rows with R1 file name.
+    :param spreadsheet_fp:
+    :return:
+    """
+
+    core_attr_plus_data_df = parse_attributes(spreadsheet_fp)
+
+    for (r1, row1), (r2, row2) in util.grouper(core_attr_plus_data_df.iterrows(), n=2):
+        if r1 == 0:
+            # skip row 0
+            pass
+        else:
+            # copy attributes from previous sample ONLY IF THE ATTRIBUTE IS EMPTY
+            column_names = list(core_attr_plus_data_df.columns)
+            for attr_name in column_names:
+                print('row {} attr "{}" is "{}"'.format(r1, attr_name, core_attr_plus_data_df.loc[r1, attr_name]))
+                if str(core_attr_plus_data_df.loc[r1, attr_name]) in ('nan', 'NaT'):
+                    print('  copy "{}" from previous sample'.format(core_attr_plus_data_df.loc[r1-2, attr_name]))
+                    core_attr_plus_data_df.loc[r1, attr_name] = core_attr_plus_data_df.loc[r1-2, attr_name]
+                else:
+                    pass
+
+    return core_attr_plus_data_df
+
+
+def parse_Caron_HL3_VertProf_seq_attrib_v3__xls(spreadsheet_fp):
     """Nothing to adjust here.
     :param spreadsheet_fp:
     :return:
     """
-    return parse_attributes(spreadsheet_fp)
+    core_attr_plus_data_df = parse_attributes(spreadsheet_fp)
 
+    for (r1, row1), (r2, row2) in util.grouper(core_attr_plus_data_df.iterrows(), n=2):
+        if r1 == 0:
+            # skip row 0
+            pass
+        else:
+            # copy attributes from previous sample ONLY IF THE ATTRIBUTE IS EMPTY
+            column_names = list(core_attr_plus_data_df.columns)
+            for attr_name in column_names:
+                print('row {} attr "{}" is "{}"'.format(r1, attr_name, core_attr_plus_data_df.loc[r1, attr_name]))
+                if str(core_attr_plus_data_df.loc[r1, attr_name]) in ('nan', 'NaT'):
+                    print('  copy "{}" from previous sample'.format(core_attr_plus_data_df.loc[r1-2, attr_name]))
+                    core_attr_plus_data_df.loc[r1, attr_name] = core_attr_plus_data_df.loc[r1-2, attr_name]
+                else:
+                    pass
 
-def parse_Caron_HL3_VertProf_seq_attrib_v2__xls(spreadsheet_fp):
-    """Nothing to adjust here.
-    :param spreadsheet_fp:
-    :return:
-    """
-    return parse_attributes(spreadsheet_fp)
+    return core_attr_plus_data_df
 
 
 def parse_Caron_HOT273_18Ssizefrac_seq_assoc_data_v2__xls(spreadsheet_fp):
