@@ -78,10 +78,17 @@ def build(db_uri):
             print('loading station and cast data into "{}"'.format(db_uri))
             for data_object in scope_data_core_collection.data_objects:
                 print('\t{}'.format(data_object.path))
+
+                downloads_dp = os.path.join(
+                    os.path.dirname(muscope.__file__),
+                    'downloads')
+
+                if not os.path.exists(downloads_dp):
+                    os.mkdir(downloads_dp)
+
                 # get the file
                 local_file_fp = os.path.join(
-                    os.path.dirname(muscope.__file__),
-                    'downloads',
+                    downloads_dp,
                     data_object.name)
 
                 irods_session.data_objects.get(
