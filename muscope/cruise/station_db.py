@@ -31,10 +31,6 @@ class Station(Base):
     sa.UniqueConstraint('cruise_name', 'station_number')
 
 
-#def get_db_uri():
-#    return 'sqlite:///stations.sqlite3'
-
-
 def get_engine(db_uri):
     return sa.create_engine(db_uri, echo=False)
 
@@ -71,7 +67,12 @@ def build(db_uri):
 
     with session_manager_from_db_uri(db_uri) as db_session:
         # insert station 0
-        insert_station(cruise_name='HL2A', station_number=0, latitude=0, longitude=0, session=db_session)
+        insert_station(cruise_name='No name', station_number=0, latitude=0, longitude=0, session=db_session)
+
+        # temporarily insert some HOT cruise stations for Church HOT 201-222 (???)
+        insert_station(cruise_name='HOT233', station_number=2, latitude=22.45, longitude=-158.0, session=db_session)
+        insert_station(cruise_name='HOT234', station_number=2, latitude=22.45, longitude=-158.0, session=db_session)
+        insert_station(cruise_name='HOT267', station_number=2, latitude=22.45, longitude=-158.0, session=db_session)
 
         with iRODSSession(irods_env_file=os.path.expanduser('~/.irods/irods_environment.json')) as irods_session:
             scope_data_core_collection = irods_session.collections.get('/iplant/home/scope/data/core')
@@ -98,7 +99,7 @@ def build(db_uri):
 
                 # MS_watercolumn.xlsx is a little different from the others
                 if os.path.basename(local_file_fp).startswith('MS_'):
-                    print('why it is "{}"'.format(local_file_fp))
+                    ##print('why it is "{}"'.format(local_file_fp))
                     skiprows = (1, )
                 else:
                     skiprows = (0, 2)
