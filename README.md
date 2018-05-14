@@ -12,11 +12,11 @@ Use a virtual environment!
 $ python3.6 -m venv ~/mudl
 $ source ~/mudl/bin/activate
 (mudl) $ pip install -r requirements.txt
-(mudl) $ write_models -o muscope_loader/models.py -u mysql+pymysql://imicrobe:<password>@localhost/muscope
+(mudl) $ write_models -o muscope_loader/models.py -u mysql+pymysql://imicrobe:<password>@localhost/muscope2
 ```
 
 ## Usage
 
 ```
-(mudl) $ python muscope_loader/cruise/HL2A.py
+(mudl) $ python muscope/cruise/load.py
 ```
