@@ -308,6 +308,17 @@ def process_muscope_collection(muscope_collection_path, attribute_file_pattern, 
         len(unrecognized_file_paths),
         '\n\t'.join(unrecognized_file_paths)))
 
+    with session_manager_from_db_uri(sample_id_db_uri) as sample_db_session:
+        unprocessed_sample_files = sample_iddb.get_unprocessed_sample_files(session=sample_db_session)
+
+        if len(unprocessed_collection_paths) == 0:
+            print('All sample files have been processed.')
+        else:
+            print('Unprocessed sample files:\n\t{}'.format('\n\t'.join([
+                s.sample_name + ':' + s.sample_file_name
+                for s
+                in unprocessed_sample_files])))
+
 
 """
 sample_name_pattern_table = {
@@ -703,6 +714,8 @@ def load_data_file(muscope_data_object, db_uri, sample_db_uri, load_data):
                     print('  setting file type to "{}"'.format(sample_file_type))
                     sample_file.sample_file_type = db_session.query(
                         models.Sample_file_type).filter(models.Sample_file_type.type_ == sample_file_type).one()
+
+                sample_iddb.mark_sample_file_processed(os.path.basename(sample_file.file_), sample_db_session)
 
         except sa.orm.exc.MultipleResultsFound as mrf:
             # this probably means we have found one or more rows with mismatched cruise and sample
