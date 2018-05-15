@@ -37,7 +37,7 @@ def main(argv):
     print('add permission for app "{}"'.format(args.app))
     with session_manager_from_db_uri(db_uri=args.db_uri) as db_session:
         for user in db_session.query(User).all():
-            print('  adding permissions for user "{}"'.format(user))
+            print('  adding permissions for user "{}"'.format(user.name))
 
             #subprocess.run(['system-roles-addupdate', '-v', '-u', args.user, '-r', 'USER', 'tacc-stampede2-jklynch'])
             #subprocess.run(['apps-pems-update', '-v', '-u', args.user, '-p', 'READ_EXECUTE', args.app])
