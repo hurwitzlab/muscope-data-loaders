@@ -36,10 +36,6 @@ class SampleFileNameToSampleName(Base):
     sa.UniqueConstraint('sample_name', 'sample_file_identifier')
 
 
-#def get_db_uri():
-#    return 'sqlite:///sample_iddb.sqlite3'
-
-
 def get_engine(db_uri):
     return sa.create_engine(db_uri, echo=False)
 
@@ -91,7 +87,20 @@ def insert_sample_file_name_and_sample_name(sample_file_name, data_type, sample_
                 processed=False))
 
 
+def mark_sample_file_processed(sample_file_name, session):
+    print('mark "{}" processed'.format(sample_file_name))
+    s = session.query(SampleFileNameToSampleName).filter(
+        SampleFileNameToSampleName.sample_file_name == sample_file_name).one()
+
+    s.processed = True
+
+
 def find_sample_name_for_sample_file_name(sample_file_name, session):
     return session.query(
         SampleFileNameToSampleName).filter(
             SampleFileNameToSampleName.sample_file_name == sample_file_name).one_or_none()
+
+
+def get_unprocessed_sample_files(session):
+    return session.query(SampleFileNameToSampleName).filter(
+        SampleFileNameToSampleName.processed == False).all()
