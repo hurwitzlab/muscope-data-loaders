@@ -39,7 +39,7 @@ def main(argv):
         for user in db_session.query(User).all():
             print('  adding permissions for user "{}"'.format(user.user_name))
 
-            c = subprocess.run(['system-roles-addupdate', '-v', '-u', user.user_name, '-r', 'USER', 'tacc-stampede2-jklynch'])
+            c = subprocess.run(['systems-roles-addupdate', '-v', '-u', user.user_name, '-r', 'USER', 'tacc-stampede2-jklynch'])
             print(c)
             c = subprocess.run(['apps-pems-update', '-v', '-u', user.user_name, '-p', 'READ_EXECUTE', args.app])
             print(c)
