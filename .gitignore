@@ -1,5 +1,4 @@
 models.py
-notebooks
 *.sqlite3
 *.xls*
 downloads/
